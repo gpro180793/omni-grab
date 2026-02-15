@@ -69,3 +69,24 @@ La app estará en `http://localhost:8080`.
 
 - **Servicios Gratuitos**: En el plan gratuito de Render, el servicio "duerme" después de 15 minutos de inactividad. La primera vez que entres tardará unos 30-50 segundos en arrancar ("Cold Start").
 - **Archivos Temporales**: Como usamos Docker y sistemas de archivos efímeros, cualquier archivo que no se borre se perderá al reiniciar. ¡Perfecto para nuestra app que borra los videos después de descargar!
+
+## 🛡️ Solución de Bloqueos de YouTube (IMPORTANTE)
+
+YouTube a veces bloquea las descargas desde servidores en la nube (como Render) mostrando errores como:
+> *"Sign in to confirm you're not a bot"*
+
+### Solución 1: Actualización Automática (Ya implementada)
+El código ya está configurado para simular ser un dispositivo **Android**, lo cual suele evitar este bloqueo.
+
+### Solución 2: Usar Cookies (Si la solución 1 falla)
+Si sigues viendo errores de bloqueo, necesitas "prestarle" tus cookies de YouTube al servidor:
+
+1.  Instala la extensión **"Get cookies.txt LOCALLY"** en Chrome/Edge.
+2.  Ve a YouTube.com (asegúrate de estar logueado).
+3.  Exporta las cookies.
+4.  Copia TODO el contenido del archivo descargado.
+5.  En **Render Dashboard**:
+    - Ve a "Environment" -> "Add Environment Variable".
+    - **Key**: `YOUTUBE_COOKIES`
+    - **Value**: Pega todo el texto de las cookies.
+6.  Guarda cambios. Render se reiniciará y funcionará.

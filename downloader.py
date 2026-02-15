@@ -39,31 +39,63 @@ class MediaEngine:
         """Return a random User-Agent to avoid blocking"""
         return random.choice(self.USER_AGENTS)
     
-    def _get_base_options(self):
-        """
-        Get base yt-dlp options with anti-blocking measures
+    def _get_cookies_path(self):
+        """Creates a cookie file from ENV variable if available"""
+        cookies_content = os.environ.get('YOUTUBE_COOKIES')
+        if not cookies_content:
+            # Check if local cookies.txt exists
+            if os.path.exists('cookies.txt'):
+                return 'cookies.txt'
+            return None
         
-        Returns:
-            dict: Base configuration options
-        """
-        return {
-            'user_agent': self._get_random_user_agent(),
-            'nocheckcertificate': True,
-            'no_warnings': False,
-            'quiet': False,
-            'no_color': True,
+        try:
+            # Create a temp file for cookies
+            import tempfile
+            cookie_file = Path(tempfile.gettempdir()) / 'yt_cookies.txt'
+            # Format correction: ensure local file is readable
+            with open(cookie_file, 'w') as f:
+                f.write(cookies_content)
+            return str(cookie_file)
+        except Exception as e:
+            print(f"Error creating cookie file: {e}")
+            return None
+
+    def _get_base_options(self):
+        """Base options for yt-dlp"""
+        opts = {
+            'quiet': True,
+            'no_warnings': True,
             'extract_flat': False,
-            'socket_timeout': 30,
-            'retries': 3,
-            'fragment_retries': 3,
-            # Cookies and headers for better compatibility
-            'cookiefile': None,
+            'format': 'best',
+            # Anti-blocking options
+            'nocheckcertificate': True,
+            'ignoreerrors': False,
+            'logtostderr': False,
+            'quiet': True,
+            'no_warnings': True,
+            'default_search': 'auto',
+            'source_address': '0.0.0.0', # Force IPv4
+            # Use Android client to avoid "Sign in to confirm you're not a bot"
+            'extractor_args': {
+                'youtube': {
+                    'player_client': ['android', 'ios'],
+                }
+            },
+            # Add headers
             'http_headers': {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
                 'Accept-Language': 'en-us,en;q=0.5',
                 'Sec-Fetch-Mode': 'navigate',
             }
         }
+        
+        # Add cookies if available
+        cookie_path = self._get_cookies_path()
+        if cookie_path:
+            opts['cookiefile'] = cookie_path
+            
+        return opts
     
     def analyze_url(self, url):
         """
