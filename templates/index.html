@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OmniGrab Media Downloader</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <style>
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background: #0F172A;
+            min-height: 100vh;
+        }
+
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(248, 250, 252, 0.1);
+        }
+
+        .glass-input {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .gradient-text {
+            background: linear-gradient(135deg, #2DD4BF 0%, #14B8A6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #2DD4BF 0%, #14B8A6 100%);
+            transition: all 0.3s ease;
+            border: 1px solid rgba(45, 212, 191, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(45, 212, 191, 0.3);
+            border-color: rgba(45, 212, 191, 0.5);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .progress-bar {
+            transition: width 0.3s ease;
+            background: linear-gradient(90deg, #2DD4BF 0%, #14B8A6 100%);
+        }
+
+        @keyframes pulse-glow {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.7;
+            }
+        }
+
+        .pulse-glow {
+            animation: pulse-glow 2s ease-in-out infinite;
+        }
+
+        /* Select Options Styling */
+        #formatSelect option {
+            color: #0F172A;
+            /* Slate 900 */
+            background-color: #F8FAFC;
+            /* Slate 50 */
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .spinner {
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top-color: #2DD4BF;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .error-card {
+            background: rgba(251, 113, 133, 0.1);
+            border: 1px solid rgba(251, 113, 133, 0.3);
+        }
+
+        .success-card {
+            background: rgba(45, 212, 191, 0.1);
+            border: 1px solid rgba(45, 212, 191, 0.3);
+        }
+
+        .surface-card {
+            background: #1E293B;
+            border: 1px solid rgba(248, 250, 252, 0.05);
+        }
+    </style>
+</head>
+
+<body class="p-4 md:p-8">
+    <div class="max-w-4xl mx-auto">
+        <!-- Header -->
+        <div class="text-center mb-12 fade-in">
+            <!-- Logo -->
+            <div class="mb-4 transform hover:scale-105 transition-transform duration-300">
+                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="OmniGrab Media Downloader"
+                    class="h-48 md:h-60 mx-auto drop-shadow-lg">
+            </div>
+            <p style="color: #94A3B8;" class="text-lg">
+                Descarga videos y audio de YouTube, Instagram, TikTok y Facebook
+            </p>
+        </div>
+
+        <!-- Main Card -->
+        <div class="glass-card rounded-2xl p-8 shadow-2xl fade-in">
+            <!-- URL Input Section -->
+            <div class="mb-6">
+                <label for="urlInput" style="color: #F8FAFC;" class="block font-semibold mb-3 text-lg">
+                    📎 Pega tu enlace aquí
+                </label>
+                <div class="flex gap-3">
+                    <input type="text" id="urlInput" placeholder="https://www.youtube.com/watch?v=..."
+                        class="glass-input flex-1 px-5 py-4 rounded-xl placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent transition-all"
+                        style="color: #F8FAFC;">
+                    <button id="analyzeBtn"
+                        class="btn-primary px-8 py-4 rounded-xl font-semibold shadow-lg flex items-center gap-2"
+                        style="color: #0F172A;">
+                        <span id="analyzeBtnText">Analizar</span>
+                        <span id="analyzeBtnSpinner" class="spinner hidden"></span>
+                    </button>
+                </div>
+                <p class="text-slate-500 text-sm mt-2">
+                    Soporta: YouTube, Instagram, TikTok, Facebook
+                </p>
+            </div>
+
+            <!-- Error Message -->
+            <div id="errorMessage" class="error-card hidden mb-6 p-4 rounded-xl fade-in" style="color: #FB7185;">
+                <span id="errorText"></span>
+            </div>
+
+            <!-- Media Info Section (Hidden by default) -->
+            <div id="mediaInfo" class="hidden mb-6 fade-in">
+                <div class="surface-card rounded-xl p-6">
+                    <div class="flex gap-4">
+                        <img id="mediaThumbnail" src="" alt="Thumbnail" class="w-32 h-32 object-cover rounded-lg">
+                        <div class="flex-1">
+                            <h3 id="mediaTitle" class="font-bold text-xl mb-2" style="color: #F8FAFC;"></h3>
+                            <p class="text-sm mb-1" style="color: #94A3B8;">
+                                <span class="font-semibold">Autor:</span> <span id="mediaUploader"></span>
+                            </p>
+                            <p class="text-sm" style="color: #94A3B8;">
+                                <span class="font-semibold">Plataforma:</span> <span id="mediaPlatform"></span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Format Selection (Hidden by default) -->
+            <div id="formatSelection" class="hidden mb-6 fade-in">
+                <label style="color: #F8FAFC;" class="block font-semibold mb-3 text-lg">
+                    🎯 Selecciona formato y calidad
+                </label>
+                <select id="formatSelect"
+                    class="glass-input w-full px-5 py-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent transition-all"
+                    style="color: #F8FAFC;">
+                    <!-- Options populated dynamically -->
+                </select>
+            </div>
+
+            <!-- Download Button (Hidden by default) -->
+            <div id="downloadSection" class="hidden fade-in">
+                <button id="downloadBtn"
+                    class="btn-primary w-full px-8 py-5 rounded-xl font-bold text-lg shadow-lg flex items-center justify-center gap-3"
+                    style="color: #0F172A;">
+                    <span id="downloadBtnText">⬇️ Descargar</span>
+                    <span id="downloadBtnSpinner" class="spinner hidden"></span>
+                </button>
+            </div>
+
+            <!-- Progress Section (Hidden by default) -->
+            <div id="progressSection" class="hidden mt-6 fade-in">
+                <div class="mb-3 flex justify-between items-center">
+                    <span style="color: #F8FAFC;" class="font-semibold" id="progressStatus">Descargando...</span>
+                    <span style="color: #2DD4BF;" class="font-bold" id="progressPercentage">0%</span>
+                </div>
+                <div class="w-full rounded-full h-4 overflow-hidden" style="background: #1E293B;">
+                    <div id="progressBar" class="progress-bar h-full rounded-full pulse-glow" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <!-- Download Complete Section (Hidden by default) -->
+            <div id="completeSection" class="hidden mt-6 fade-in">
+                <div class="success-card rounded-xl p-6 text-center">
+                    <div class="text-6xl mb-3">✅</div>
+                    <h3 style="color: #F8FAFC;" class="font-bold text-xl mb-2">¡Descarga Iniciada!</h3>
+                    <p style="color: #94A3B8;" class="mb-4">El archivo se guardará en tu carpeta de descargas.</p>
+
+                    <button id="resetBtn" class="inline-block btn-primary px-8 py-3 rounded-xl font-semibold shadow-lg"
+                        style="color: #0F172A;">
+                        🔄 Descargar otro video
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="text-center mt-8 text-slate-500 text-sm">
+            <p>Desarrollado con ❤️ usando Python, Flask y yt-dlp</p>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const urlInput = document.getElementById('urlInput');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const analyzeBtnText = document.getElementById('analyzeBtnText');
+        const analyzeBtnSpinner = document.getElementById('analyzeBtnSpinner');
+        const errorMessage = document.getElementById('errorMessage');
+        const errorText = document.getElementById('errorText');
+        const mediaInfo = document.getElementById('mediaInfo');
+        const mediaThumbnail = document.getElementById('mediaThumbnail');
+        const mediaTitle = document.getElementById('mediaTitle');
+        const mediaUploader = document.getElementById('mediaUploader');
+        const mediaPlatform = document.getElementById('mediaPlatform');
+        const formatSelection = document.getElementById('formatSelection');
+        const formatSelect = document.getElementById('formatSelect');
+        const downloadSection = document.getElementById('downloadSection');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const downloadBtnText = document.getElementById('downloadBtnText');
+        const downloadBtnSpinner = document.getElementById('downloadBtnSpinner');
+        const progressSection = document.getElementById('progressSection');
+        const progressStatus = document.getElementById('progressStatus');
+        const progressPercentage = document.getElementById('progressPercentage');
+        const progressBar = document.getElementById('progressBar');
+        const completeSection = document.getElementById('completeSection');
+        const completedFilename = document.getElementById('completedFilename');
+        const downloadLink = document.getElementById('downloadLink');
+
+        let currentUrl = '';
+        let availableFormats = [];
+
+        // Show error message
+        function showError(message) {
+            errorText.textContent = message;
+            errorMessage.classList.remove('hidden');
+            setTimeout(() => {
+                errorMessage.classList.add('hidden');
+            }, 5000);
+        }
+
+        // Hide all sections
+        function resetUI() {
+            mediaInfo.classList.add('hidden');
+            formatSelection.classList.add('hidden');
+            downloadSection.classList.add('hidden');
+            progressSection.classList.add('hidden');
+            completeSection.classList.add('hidden');
+            errorMessage.classList.add('hidden');
+        }
+
+        // Analyze URL
+        analyzeBtn.addEventListener('click', async () => {
+            const url = urlInput.value.trim();
+
+            if (!url) {
+                showError('Por favor ingresa una URL válida');
+                return;
+            }
+
+            // Reset UI
+            resetUI();
+
+            // Show loading state
+            analyzeBtn.disabled = true;
+            analyzeBtnText.textContent = 'Analizando...';
+            analyzeBtnSpinner.classList.remove('hidden');
+
+            try {
+                const response = await fetch('/api/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ url: url })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    currentUrl = url;
+                    availableFormats = data.formats;
+
+                    // Display media info
+                    mediaThumbnail.src = data.info.thumbnail || 'https://via.placeholder.com/128';
+                    mediaTitle.textContent = data.info.title;
+                    mediaUploader.textContent = data.info.uploader;
+                    mediaPlatform.textContent = data.info.platform;
+                    mediaInfo.classList.remove('hidden');
+
+                    // Populate format options
+                    formatSelect.innerHTML = '';
+                    data.formats.forEach(format => {
+                        const option = document.createElement('option');
+                        option.value = format.id;
+                        option.textContent = format.label;
+                        formatSelect.appendChild(option);
+                    });
+
+                    formatSelection.classList.remove('hidden');
+                    downloadSection.classList.remove('hidden');
+                } else {
+                    showError(data.error || 'Error al analizar la URL');
+                }
+            } catch (error) {
+                showError('Error de conexión con el servidor');
+                console.error(error);
+            } finally {
+                // Reset button state
+                analyzeBtn.disabled = false;
+                analyzeBtnText.textContent = 'Analizar';
+                analyzeBtnSpinner.classList.add('hidden');
+            }
+        });
+
+        // Download media
+        downloadBtn.addEventListener('click', async () => {
+            const selectedFormat = formatSelect.value;
+
+            if (!currentUrl || !selectedFormat) {
+                showError('Por favor selecciona un formato');
+                return;
+            }
+
+            // Show loading state
+            downloadBtn.disabled = true;
+            downloadBtnText.textContent = 'Procesando, por favor espere unos segundos...';
+            downloadBtnSpinner.classList.remove('hidden');
+
+            try {
+                // Create a form and submit it to trigger download
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '/api/download';
+                form.style.display = 'none';
+
+                const urlInput = document.createElement('input');
+                urlInput.name = 'url';
+                urlInput.value = currentUrl;
+                form.appendChild(urlInput);
+
+                const formatInput = document.createElement('input');
+                formatInput.name = 'format';
+                formatInput.value = selectedFormat;
+                form.appendChild(formatInput);
+
+                document.body.appendChild(form);
+                form.submit();
+                document.body.removeChild(form);
+
+                // Show success message (approximate since we can't track form submission progress easily)
+                setTimeout(() => {
+                    downloadBtn.disabled = false;
+                    downloadBtnText.textContent = '⬇️ Descargar';
+                    downloadBtnSpinner.classList.add('hidden');
+
+                    // Show completion message
+                    completeSection.classList.remove('hidden');
+                    downloadSection.classList.add('hidden');
+                    completedFilename.textContent = "Tu descarga debería haber comenzado";
+
+                    // Reset UI after a few seconds
+                    setTimeout(() => {
+                        downloadBtn.disabled = false;
+                        downloadBtnText.textContent = '⬇️ Descargar';
+                        downloadBtnSpinner.classList.add('hidden');
+                    }, 3000);
+                }, 2000);
+
+            } catch (error) {
+                showError('Error al iniciar la descarga');
+                console.error(error);
+                downloadBtn.disabled = false;
+                downloadBtnText.textContent = '⬇️ Descargar';
+                downloadBtnSpinner.classList.add('hidden');
+            }
+        });
+
+        // Listen to progress updates via SSE
+        function listenToProgress(taskId) {
+            const eventSource = new EventSource(`/api/progress/${taskId}`);
+
+            eventSource.onmessage = (event) => {
+                const progress = JSON.parse(event.data);
+
+                // Update progress UI
+                progressPercentage.textContent = `${Math.round(progress.percentage)}%`;
+                progressBar.style.width = `${progress.percentage}%`;
+                progressStatus.textContent = progress.message;
+
+                // Handle completion
+                if (progress.status === 'completed') {
+                    eventSource.close();
+                    progressSection.classList.add('hidden');
+                    completeSection.classList.remove('hidden');
+                    completedFilename.textContent = progress.filename;
+                    downloadLink.href = progress.download_url;
+
+                    // Cleanup task
+                    fetch(`/api/cleanup/${taskId}`, { method: 'DELETE' });
+                } else if (progress.status === 'error') {
+                    eventSource.close();
+                    showError(progress.message);
+                    progressSection.classList.add('hidden');
+                    downloadSection.classList.remove('hidden');
+
+                    // Cleanup task
+                    fetch(`/api/cleanup/${taskId}`, { method: 'DELETE' });
+                }
+            };
+
+            eventSource.onerror = (error) => {
+                console.error('SSE Error:', error);
+                eventSource.close();
+                showError('Error al recibir actualizaciones de progreso');
+                progressSection.classList.add('hidden');
+                downloadSection.classList.remove('hidden');
+            };
+        }
+
+        // Reset button
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            window.location.reload();
+        });
+
+        // Allow Enter key to trigger analyze
+        urlInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                analyzeBtn.click();
+            }
+        });
+    </script>
+</body>
+
+</html>

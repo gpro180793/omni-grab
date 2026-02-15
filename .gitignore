@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environment
+venv/
+env/
+.env
+
+# Distribution / Packaging
+dist/
+build/
+*.egg-info/
+
+# IDE
+.idea/
+.vscode/
+
+# Project specific
+downloads/
+static/downloads/
+*.mp4
+*.mp3
+.cache/
